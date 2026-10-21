@@ -8,7 +8,7 @@
 
 ## 中文
 
-一个**粒子碰撞驱动的生成式音序器**，不是 granular 粒子合成器。
+一个**粒子碰撞驱动的生成式音序器**。
 
 小球在封闭场地内运动，与墙壁和其他小球碰撞。每次碰撞都会交换音高、包络和效果属性，生成波、场和火花，并产生音符/触发事件。最终得到的是持续变化、随机但不会跑调的旋律与节奏。
 
@@ -116,7 +116,7 @@ GPL-3.0-or-later，见 [LICENSE](LICENSE)。
 
 ## English
 
-A **particle-collision generative sequencer** — not a granular synthesizer.
+A **particle-collision generative sequencer**.
 
 Balls move inside a bounded field and collide with each other and with the
 walls. Every collision transfers pitch, envelope and effect properties, spawns
