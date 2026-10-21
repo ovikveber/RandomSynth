@@ -104,6 +104,10 @@ cmake --build build --config Release
 
 Windows 下也可以使用 `Others/build.ps1`，但脚本里有硬编码的 Visual Studio / Ninja 路径，需要按你的环境修改。
 
+### AI 辅助说明
+
+本项目在开发过程中使用了 AI 辅助，包括代码编写、重构、调试和文档撰写。使用的模型为 **DeepSeek**。所有功能与代码均由作者审核、测试并最终负责。
+
 ### 许可证
 
 GPL-3.0-or-later，见 [LICENSE](LICENSE)。
@@ -223,6 +227,10 @@ cmake --build build --config Release
 
 On Windows you can also use `Others/build.ps1`; it contains hard-coded Visual
 Studio / Ninja paths, so adjust them for your machine.
+
+### AI Assistance
+
+This project was developed with AI assistance, including code generation, refactoring, debugging and documentation. The model used was **DeepSeek**. All features and code were reviewed, tested and are maintained by the author.
 
 ### License
 
