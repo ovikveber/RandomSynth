@@ -1,4 +1,4 @@
-# OV RandomSynth
+﻿# OV RandomSynth
 
 A **particle-collision generative sequencer** — not a granular synthesizer.
 
@@ -33,15 +33,20 @@ standalone prototype is included as well.
 ## Repository layout
 
 ```
-src/                     JUCE standalone prototype
-vcv/RandomSynth/         VCV Rack module (open-source target)
-  plugin.json
+VCV-Module/              VCV Rack module (the open-source target; build this)
   Makefile
+  plugin.json
   src/
-build.ps1                Windows JUCE build helper
-visual_prototype.py      Early Python visual prototype
-CMakeLists.txt           JUCE standalone build
+Others/                  Everything else (prototypes, build scripts, local outputs)
+  CMakeLists.txt
+  build.ps1
+  src/                   JUCE standalone prototype
+  visual_prototype.py    Early Python visual prototype
+  *.bat                  Local run scripts
 ```
+
+Only `VCV-Module/` is needed to build the VCV Rack plugin. `Others/` contains
+the in-progress standalone/prototype versions and local build outputs.
 
 ## Build the VCV Rack module
 
@@ -52,7 +57,7 @@ Requirements:
 - A C++17 compiler (MSYS2 MinGW-w64 on Windows)
 
 ```sh
-cd vcv/RandomSynth
+cd VCV-Module
 
 # Build plugin.dll
 make RACK_DIR=/path/to/Rack-SDK
@@ -72,22 +77,23 @@ menu, or copy the built plugin folder into your Rack user plugin directory.
 
 ## Build the JUCE standalone (optional)
 
-The JUCE path is configured at the top of `CMakeLists.txt`:
+The JUCE path is configured at the top of `Others/CMakeLists.txt`:
 
 ```cmake
-set(JUCE_DIR "D:/avst made/lib/JUCE-9.0.1")
+set(JUCE_DIR "/path/to/JUCE" CACHE PATH "Path to a JUCE checkout")
 ```
 
-Change it to your local JUCE checkout, then use `build.ps1` on Windows or build
-with CMake directly:
+Change it to your local JUCE checkout, then run from `Others/` and use
+`build.ps1` on Windows, or build with CMake directly:
 
 ```sh
+cd Others
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 
-`build.ps1` also contains hard-coded Visual Studio / Ninja paths; adjust them
-for your machine.
+`Others/build.ps1` also contains hard-coded Visual Studio / Ninja paths;
+adjust them for your machine.
 
 ## License
 
