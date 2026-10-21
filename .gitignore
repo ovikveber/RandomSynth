@@ -1,0 +1,26 @@
+# Build outputs
+build/
+dist/
+发布/
+__pycache__/
+*.pyc
+
+# Compiled binaries
+*.exe
+*.dll
+*.lib
+*.obj
+*.pdb
+*.vcvplugin
+*.zip
+
+# Media / large files
+*.mp4
+*.wav
+*.mp3
+
+# IDE / OS
+.vs/
+.idea/
+.DS_Store
+Thumbs.db

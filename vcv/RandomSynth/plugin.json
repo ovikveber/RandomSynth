@@ -1,0 +1,17 @@
+{
+  "slug": "RandomSynth",
+  "name": "RandomSynth",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "OV",
+  "author": "OV",
+  "description": "Particle collision random CV generator",
+  "modules": [
+    {
+      "slug": "RandomSynth",
+      "name": "RandomSynth",
+      "description": "Random pitch, unpredictable gates and triggers from a colliding particle field",
+      "tags": ["Sequencer", "Random", "Visual"]
+    }
+  ]
+}
