@@ -48,7 +48,17 @@ Others/                  Everything else (prototypes, build scripts, local outpu
 Only `VCV-Module/` is needed to build the VCV Rack plugin. `Others/` contains
 the in-progress standalone/prototype versions and local build outputs.
 
-## Build the VCV Rack module
+## Install without building (Windows x64)
+
+Download `VCV-Module/RandomSynth-2.0.0-win-x64.vcvplugin` and drag the
+`.vcvplugin` file into the VCV Rack window. Requires VCV Rack 2.x on
+Windows x64.
+
+Note: the source folder itself cannot be dragged into Rack — only the built
+`.vcvplugin` file (or a plugin folder containing `plugin.dll` and
+`plugin.json`) can be loaded.
+
+## Build the VCV Rack module from source
 
 Requirements:
 

@@ -12,6 +12,7 @@ __pycache__/
 *.obj
 *.pdb
 *.vcvplugin
+!VCV-Module/RandomSynth-2.0.0-win-x64.vcvplugin
 *.zip
 
 # Media / large files
