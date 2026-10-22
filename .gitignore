@@ -1,4 +1,4 @@
-# Build outputs
+﻿# Build outputs
 build/
 dist/
 发布/
@@ -25,3 +25,6 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local project log
+PROJECT_LOG.md
