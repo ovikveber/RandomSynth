@@ -15,12 +15,51 @@ struct Prop
     float value = 60.0f;
 };
 
+enum class ScaleMode : int
+{
+    Free = 0,
+    Major,
+    Minor,
+    Dorian,
+    Phrygian,
+    Lydian,
+    Mixolydian,
+    Locrian,
+    HarmonicMinor,
+    MelodicMinor,
+    MajorPentatonic,
+    MinorPentatonic,
+    Blues,
+    WholeTone,
+    Diminished,
+    Chromatic,
+    JustMajor,
+    JustMinor,
+    Edo24,
+    Edo31,
+    Edo48,
+    Edo72,
+    Count
+};
+
+const char* scaleName (int mode);
+
+// One musical event produced by a collision. This is the integration boundary
+// for downstream instruments/sequencers:
+//   note / velocity  -> MIDI note and velocity
+//   gateSeconds      -> how long the note should be held (can be changed by ADSR balls)
+//   pan              -> -1..1 stereo position
+//   send             -> FX / reverb send CV, 0..1 (also exposed as the REVERB macro)
+//   waveform         -> oscillator waveform CV, 0..1 (0 = sine, 1 = square)
+//   attack..release  -> ADSR envelope CV
 struct SoundEvent
 {
     float note = 60.0f;
     float pan = 0.0f;
     float send = 0.0f;
     float velocity = 0.5f;
+    float gateSeconds = 0.08f;
+    float waveform = 0.0f;
     float attack = 0.005f;
     float decay = 0.15f;
     float sustain = 0.6f;
@@ -36,6 +75,19 @@ struct WorldSettings
     float speedCap = 280.0f;
     float waveSpeed = 0.65f;
     float waveRange = 0.5f;
+    float pitchRange = 4.0f;
+    int scaleMode = 0;
+
+    float defaultGate = 0.08f;
+    float gateMin = 0.03f;
+    float gateMax = 0.50f;
+
+    float baseWaveform = 0.0f;
+    float baseReverb = 0.0f;
+
+    int ballCount = 12;
+    int boosterCount = 2;
+
     std::array<float, 3> ratio { 0.50f, 0.25f, 0.25f };
 };
 
@@ -119,6 +171,14 @@ public:
     void setShape (int newShape);
     void setFieldScale (float scale);
     void setBallScale (float scale);
+    void setPitchRange (float octaves);
+    void setScale (int mode);
+    void setDefaultGate (float seconds);
+    void setGateRange (float minSeconds, float maxSeconds);
+    void setBaseWaveform (float value) { settings.baseWaveform = juce::jlimit (0.0f, 1.0f, value); }
+    void setBaseReverb (float value) { settings.baseReverb = juce::jlimit (0.0f, 1.0f, value); }
+    void setBallCount (int count);
+    void setBoosterCount (int count);
     void setSettings (const WorldSettings& s) { settings = s; }
     const WorldSettings& getSettings() const { return settings; }
     void clearEffects();
@@ -161,6 +221,8 @@ private:
         std::array<float, 3> waveAmp { 0.0f, 0.0f, 0.0f };
         std::array<float, 3> waveTimer { 0.0f, 0.0f, 0.0f };
         float phase = 0.0f;
+        float gate = 0.08f;
+        bool gateOverridden = false;
         int uid = 0;
     };
 
@@ -231,6 +293,11 @@ private:
     float effectiveNote (const Ball& b) const;
     std::array<float, 3> targetRatios() const;
     Prop randomProp (PropKind kind) const;
+    float randomNote() const;
+    float randomGate();
+    float quantizeNote (float note) const;
+    void rebuildScaleTable();
+    void giveGate (Ball& ball);
     void emitSound (const Ball& b, const Prop& oldProp, float oldNote, float impact);
     void swapWall (Ball& ball, Segment& seg, juce::Point<float> contact, float impact);
     static int kindIndex (PropKind k) { return static_cast<int> (k); }
@@ -244,11 +311,13 @@ private:
     std::vector<Spark> sparks;
     std::vector<Link> links;
     std::vector<SoundEvent> events;
+    std::vector<float> scaleTable;
 
     WorldSettings settings;
     mutable std::mt19937 rng;
     float elapsed = 0.0f;
     float typeGuardTimer = 0.0f;
+    float wallGraceTimer = 0.0f;
     int nextUid = 1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (World)

@@ -38,7 +38,7 @@ void RandomSynthAudioProcessor::SimThread::run()
 
 void RandomSynthAudioProcessor::applySharedParams()
 {
-    WorldSettings s;
+    auto s = world.getSettings();
     s.ballScale = params.ballScale.load();
     s.ballSpeed = params.ballSpeed.load();
     s.speedShare = params.speedShare.load();

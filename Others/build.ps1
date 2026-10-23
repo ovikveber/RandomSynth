@@ -39,4 +39,20 @@ finally {
 
 $exe = Join-Path $work 'build\RandomSynth_artefacts\Release\Standalone\RandomSynth.exe'
 Copy-Item -LiteralPath $exe -Destination (Join-Path $dist 'RandomSynth.exe') -Force
+
+$midiExe = Join-Path $work 'build\RandomSynthMIDI_artefacts\Release\Standalone\RandomSynth MIDI.exe'
+if (Test-Path -LiteralPath $midiExe) {
+    Copy-Item -LiteralPath $midiExe -Destination (Join-Path $dist 'RandomSynth MIDI.exe') -Force
+}
+
+$vst3 = Join-Path $work 'build\RandomSynthMIDI_artefacts\Release\VST3\RandomSynth MIDI.vst3'
+$vst3Dest = Join-Path $dist 'RandomSynth MIDI.vst3'
+if (Test-Path -LiteralPath $vst3) {
+    if (Test-Path -LiteralPath $vst3Dest) {
+        Remove-Item -LiteralPath $vst3Dest -Recurse -Force
+    }
+    Copy-Item -LiteralPath $vst3 -Destination $vst3Dest -Recurse -Force
+}
+
 Write-Output "Build OK -> $dist\RandomSynth.exe"
+Write-Output "Build OK -> $dist\RandomSynth MIDI.vst3"

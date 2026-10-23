@@ -45,6 +45,16 @@ VCV Rack 2.x 窗口即可加载。
 
 注意：**源码文件夹不能直接拖进 Rack**，Rack 只识别编译好的 `.vcvplugin`，或包含 `plugin.dll` + `plugin.json` 的插件文件夹。
 
+### VST3 MIDI 发生器
+
+`Others/` 里新增了纯 MIDI 的 VST3 版本：不产生音频，只输出 Note On/Off，
+并带粒子碰撞图形界面、RUN/STOP/RESET、小球数量和加速器控制。
+面板上的 `MIDI CH` 下拉框可选 1–16，类似 FL Studio 的 MIDI Out；宿主负责把
+MIDI 输出路由到其他通道/合成器。FX、ADSR、波形和混响保留为代码接口，
+不占面板旋钮。安装包只包含这一个 VST3：
+`Others/dist/RandomSynth-MIDI-1.0.0-win-x64.exe`。
+构建方法和路由说明见 [Others/VST3_MIDI_README.md](Others/VST3_MIDI_README.md)。
+
 ### 仓库结构
 
 ```
@@ -56,7 +66,8 @@ VCV-Module/              VCV Rack 模块的 2.0.0 历史副本（已归档，不
 Others/                  其他版本（原型、构建脚本、本地产物）
   CMakeLists.txt
   build.ps1
-  src/                   JUCE 独立版原型
+  src/                   JUCE 独立版原型 + VST3 MIDI 发生器
+  VST3_MIDI_README.md    VST3 交接说明与接口文档
   visual_prototype.py    Python 视觉原型
   *.bat                  本地运行脚本
 ```
@@ -167,6 +178,18 @@ Note: the source folder itself cannot be dragged into Rack — only the built
 `.vcvplugin` file (or a plugin folder containing `plugin.dll` and `plugin.json`)
 can be loaded.
 
+### VST3 MIDI generator
+
+`Others/` also contains a pure MIDI VST3 version: it produces Note On/Off only
+and no audio, with a particle-collision visual interface, RUN/STOP/RESET,
+ball-count and booster controls. The `MIDI CH` dropdown selects channels 1–16,
+similar to FL Studio's MIDI Out; the host routes the plugin's MIDI output to
+other channels/synths. FX, ADSR, waveform and reverb are retained as code
+interfaces, not panel knobs. The installer contains only this single VST3:
+`Others/dist/RandomSynth-MIDI-1.0.0-win-x64.exe`. See
+[Others/VST3_MIDI_README.md](Others/VST3_MIDI_README.md) for build steps and the
+interface description.
+
 ### Repository layout
 
 ```
@@ -178,7 +201,8 @@ VCV-Module/              Historical 2.0.0 copy of the VCV module (archived)
 Others/                  Everything else (prototypes, build scripts, local outputs)
   CMakeLists.txt
   build.ps1
-  src/                   JUCE standalone prototype
+  src/                   JUCE standalone prototype + VST3 MIDI generator
+  VST3_MIDI_README.md    VST3 handoff and interface documentation
   visual_prototype.py    Early Python visual prototype
   *.bat                  Local run scripts
 ```

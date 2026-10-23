@@ -2,11 +2,25 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numeric>
 
 namespace
 {
 constexpr float twoPi = juce::MathConstants<float>::twoPi;
+constexpr float pitchCenter = 60.0f;
+
+float pitchHalfSpan (float octaves)
+{
+    return juce::jmax (0.5f, octaves) * 6.0f;
+}
+
+const char* const scaleNames[] {
+    "FREE", "MAJOR", "MINOR", "DORIAN", "PHRYGIAN", "LYDIAN", "MIXOLYDIAN",
+    "LOCRIAN", "HARM MIN", "MEL MIN", "MAJ PENT", "MIN PENT", "BLUES",
+    "WHOLE", "DIMINISHED", "CHROMATIC", "JUST MAJ", "JUST MIN",
+    "24-EDO", "31-EDO", "48-EDO", "72-EDO"
+};
 
 float clampf (float v, float lo, float hi)
 {
@@ -30,6 +44,13 @@ float fieldRadius (PropKind kind)
 {
     return baseRadius (kind);
 }
+}
+
+const char* scaleName (int mode)
+{
+    const auto last = (int) ScaleMode::Count - 1;
+    mode = juce::jlimit (0, last, mode);
+    return scaleNames[mode];
 }
 
 World::World()
@@ -149,6 +170,7 @@ void World::buildBoundary()
 void World::reset()
 {
     buildBoundary();
+    rebuildScaleTable();
     balls.clear();
     fields.clear();
     waves.clear();
@@ -158,14 +180,18 @@ void World::reset()
     events.clear();
     elapsed = 0.0f;
     typeGuardTimer = 0.0f;
+    wallGraceTimer = 0.0f;
     nextUid = 1;
 
-    for (int i = 0; i < 12; ++i)
+    const auto ballTarget = juce::jlimit (1, 32, settings.ballCount);
+    for (int i = 0; i < ballTarget; ++i)
         spawnBall();
 
-    ensureTypes();
+    if (ballTarget >= 3)
+        ensureTypes();
 
-    for (int i = 0; i < 2; ++i)
+    const auto boosterTarget = juce::jlimit (0, 5, settings.boosterCount);
+    for (int i = 0; i < boosterTarget; ++i)
         spawnBooster();
 }
 
@@ -203,6 +229,8 @@ void World::setFieldScale (float scale)
     sparks.clear();
 
     const juce::Point<float> center (fieldX + fieldW * 0.5f, fieldY + fieldH * 0.5f);
+
+    wallGraceTimer = 0.18f;
 
     // Scale every object around the field center so the whole layout follows
     // the field instead of being re-randomized. If an object would end up
@@ -242,6 +270,211 @@ void World::setBallScale (float scale)
         b.radius = juce::jmax (2.0f, b.r0 * scale);
 }
 
+void World::setPitchRange (float octaves)
+{
+    octaves = juce::jlimit (0.5f, 8.0f, octaves);
+    if (std::abs (octaves - settings.pitchRange) < 1.0e-4f)
+        return;
+
+    const auto oldHalf = pitchHalfSpan (settings.pitchRange);
+    const auto newHalf = pitchHalfSpan (octaves);
+    const auto k = oldHalf > 1.0e-6f ? newHalf / oldHalf : 1.0f;
+
+    settings.pitchRange = octaves;
+    rebuildScaleTable();
+
+    for (auto& b : balls)
+    {
+        b.note = pitchCenter + (b.note - pitchCenter) * k;
+
+        if (b.prop.kind == PropKind::pitch)
+        {
+            b.prop.value = pitchCenter + (b.prop.value - pitchCenter) * k;
+            b.note = b.prop.value;
+        }
+
+        if (settings.scaleMode != 0)
+        {
+            b.note = quantizeNote (b.note);
+            if (b.prop.kind == PropKind::pitch)
+                b.prop.value = b.note;
+        }
+    }
+}
+
+void World::setScale (int mode)
+{
+    const auto last = (int) ScaleMode::Count - 1;
+    mode = juce::jlimit (0, last, mode);
+    if (mode == settings.scaleMode)
+        return;
+
+    settings.scaleMode = mode;
+    rebuildScaleTable();
+
+    if (scaleTable.empty())
+        return;
+
+    for (auto& b : balls)
+    {
+        b.note = quantizeNote (b.note);
+        if (b.prop.kind == PropKind::pitch)
+            b.prop.value = b.note;
+    }
+}
+
+void World::setDefaultGate (float seconds)
+{
+    settings.defaultGate = juce::jlimit (0.01f, 2.0f, seconds);
+    for (auto& b : balls)
+        if (! b.gateOverridden)
+            b.gate = settings.defaultGate;
+}
+
+void World::setGateRange (float minSeconds, float maxSeconds)
+{
+    minSeconds = juce::jlimit (0.01f, 2.0f, minSeconds);
+    maxSeconds = juce::jlimit (0.01f, 2.0f, maxSeconds);
+    settings.gateMin = juce::jmin (minSeconds, maxSeconds);
+    settings.gateMax = juce::jmax (minSeconds, maxSeconds);
+}
+
+void World::setBallCount (int count)
+{
+    count = juce::jlimit (1, 32, count);
+    settings.ballCount = count;
+
+    while ((int) balls.size() > count)
+        balls.pop_back();
+
+    while ((int) balls.size() < count)
+        spawnBall();
+}
+
+void World::setBoosterCount (int count)
+{
+    count = juce::jlimit (0, 5, count);
+    settings.boosterCount = count;
+
+    while ((int) boosters.size() > count)
+        boosters.pop_back();
+
+    while ((int) boosters.size() < count)
+        spawnBooster();
+}
+
+void World::rebuildScaleTable()
+{
+    scaleTable.clear();
+
+    const auto mode = settings.scaleMode;
+    if (mode <= 0)
+        return;
+
+    const auto halfCents = pitchHalfSpan (settings.pitchRange) * 100.0f;
+
+    auto addPeriodic = [this, halfCents] (std::initializer_list<float> semitones)
+    {
+        const auto minOct = (int) std::floor ((-halfCents) / 1200.0f) - 1;
+        const auto maxOct = (int) std::ceil (halfCents / 1200.0f) + 1;
+        for (int oct = minOct; oct <= maxOct; ++oct)
+        {
+            for (auto s : semitones)
+            {
+                const auto cents = (float) oct * 1200.0f + s * 100.0f;
+                if (cents >= -halfCents - 1.0e-3f && cents <= halfCents + 1.0e-3f)
+                    scaleTable.push_back (cents);
+            }
+        }
+    };
+
+    auto addEdo = [this, halfCents] (int divisions)
+    {
+        const auto step = 1200.0f / (float) divisions;
+        const auto first = (int) std::ceil (-halfCents / step);
+        const auto last = (int) std::floor (halfCents / step);
+        for (int k = first; k <= last; ++k)
+            scaleTable.push_back ((float) k * step);
+    };
+
+    switch (static_cast<ScaleMode> (mode))
+    {
+        case ScaleMode::Major:           addPeriodic ({ 0, 2, 4, 5, 7, 9, 11 }); break;
+        case ScaleMode::Minor:           addPeriodic ({ 0, 2, 3, 5, 7, 8, 10 }); break;
+        case ScaleMode::Dorian:          addPeriodic ({ 0, 2, 3, 5, 7, 9, 10 }); break;
+        case ScaleMode::Phrygian:        addPeriodic ({ 0, 1, 3, 5, 7, 8, 10 }); break;
+        case ScaleMode::Lydian:          addPeriodic ({ 0, 2, 4, 6, 7, 9, 11 }); break;
+        case ScaleMode::Mixolydian:      addPeriodic ({ 0, 2, 4, 5, 7, 9, 10 }); break;
+        case ScaleMode::Locrian:         addPeriodic ({ 0, 1, 3, 5, 6, 8, 10 }); break;
+        case ScaleMode::HarmonicMinor:   addPeriodic ({ 0, 2, 3, 5, 7, 8, 11 }); break;
+        case ScaleMode::MelodicMinor:    addPeriodic ({ 0, 2, 3, 5, 7, 9, 11 }); break;
+        case ScaleMode::MajorPentatonic: addPeriodic ({ 0, 2, 4, 7, 9 }); break;
+        case ScaleMode::MinorPentatonic: addPeriodic ({ 0, 3, 5, 7, 10 }); break;
+        case ScaleMode::Blues:           addPeriodic ({ 0, 3, 5, 6, 7, 10 }); break;
+        case ScaleMode::WholeTone:       addPeriodic ({ 0, 2, 4, 6, 8, 10 }); break;
+        case ScaleMode::Diminished:      addPeriodic ({ 0, 2, 3, 5, 6, 8, 9, 11 }); break;
+        case ScaleMode::Chromatic:       addPeriodic ({ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }); break;
+        case ScaleMode::JustMajor:       addPeriodic ({ 0.0f, 2.0391f, 3.8631f, 4.9804f, 7.0196f, 8.8436f, 10.8827f }); break;
+        case ScaleMode::JustMinor:       addPeriodic ({ 0.0f, 2.0391f, 3.1564f, 4.9804f, 7.0196f, 8.1369f, 10.1760f }); break;
+        case ScaleMode::Edo24:           addEdo (24); break;
+        case ScaleMode::Edo31:           addEdo (31); break;
+        case ScaleMode::Edo48:           addEdo (48); break;
+        case ScaleMode::Edo72:           addEdo (72); break;
+        default: break;
+    }
+
+    std::sort (scaleTable.begin(), scaleTable.end());
+    scaleTable.erase (std::unique (scaleTable.begin(), scaleTable.end(),
+                                   [] (float a, float b) { return std::abs (a - b) < 0.01f; }),
+                      scaleTable.end());
+}
+
+float World::randomNote() const
+{
+    std::uniform_real_distribution<float> dist (0.0f, 1.0f);
+    const auto half = pitchHalfSpan (settings.pitchRange);
+
+    if (! scaleTable.empty())
+    {
+        auto index = (int) (dist (rng) * (float) scaleTable.size());
+        index = juce::jlimit (0, (int) scaleTable.size() - 1, index);
+        return pitchCenter + scaleTable[(size_t) index] / 100.0f;
+    }
+
+    return pitchCenter + (dist (rng) * 2.0f - 1.0f) * half;
+}
+
+float World::quantizeNote (float note) const
+{
+    if (scaleTable.empty())
+        return note;
+
+    const auto cents = (note - pitchCenter) * 100.0f;
+    const auto it = std::lower_bound (scaleTable.begin(), scaleTable.end(), cents);
+
+    if (it == scaleTable.begin())
+        return pitchCenter + scaleTable.front() / 100.0f;
+    if (it == scaleTable.end())
+        return pitchCenter + scaleTable.back() / 100.0f;
+
+    const auto hi = *it;
+    const auto lo = *(it - 1);
+    const auto best = (cents - lo <= hi - cents) ? lo : hi;
+    return pitchCenter + best / 100.0f;
+}
+
+float World::randomGate()
+{
+    std::uniform_real_distribution<float> dist (0.0f, 1.0f);
+    return settings.gateMin + dist (rng) * (settings.gateMax - settings.gateMin);
+}
+
+void World::giveGate (Ball& ball)
+{
+    ball.gate = randomGate();
+    ball.gateOverridden = true;
+}
+
 void World::clearEffects()
 {
     fields.clear();
@@ -272,7 +505,7 @@ Prop World::randomProp (PropKind kind) const
 {
     std::uniform_real_distribution<float> dist (0.0f, 1.0f);
     if (kind == PropKind::pitch)
-        return { kind, 36.0f + dist (rng) * 48.0f };
+        return { kind, randomNote() };
     if (kind == PropKind::adsr)
         return { kind, 0.25f + dist (rng) * 0.70f };
     return { kind, 0.35f + dist (rng) * 0.60f };
@@ -296,7 +529,8 @@ void World::spawnBall (int forcedKind, juce::Point<float> forcedPos)
 
     Ball b;
     b.prop = prop;
-    b.note = kind == PropKind::pitch ? prop.value : 36.0f + (float) rng() / (float) rng.max() * 48.0f;
+    b.note = kind == PropKind::pitch ? prop.value : randomNote();
+    b.gate = settings.defaultGate;
     b.pos = forcedPos.getDistanceFromOrigin() > 1.0f ? forcedPos : randomPoint (12.0f);
     std::uniform_real_distribution<float> angleDist (0.0f, twoPi);
     std::uniform_real_distribution<float> speedDist (75.0f, 185.0f);
@@ -374,6 +608,7 @@ void World::update (float dt)
 
     elapsed += dt;
     typeGuardTimer -= dt;
+    wallGraceTimer = juce::jmax (0.0f, wallGraceTimer - dt);
     if (typeGuardTimer <= 0.0f)
     {
         typeGuardTimer = 0.75f;
@@ -513,10 +748,11 @@ void World::bounceOffWall (Ball& ball)
 
     ball.pos += n * (bestPen + 0.6f);
     const auto vn = ball.vel.getDotProduct (n);
+    const auto resizing = wallGraceTimer > 0.0f;
     if (vn < 0.0f)
-        ball.vel -= n * (2.0f * vn);
+        ball.vel -= n * ((resizing ? 1.0f : 2.0f) * vn);
 
-    if (ball.wallCd > 0.0f)
+    if (resizing || ball.wallCd > 0.0f)
         return;
 
     ball.wallCd = 0.14f;
@@ -570,7 +806,7 @@ void World::ensureInside (Ball& ball)
     ball.pos = closest + worst->n * (ball.radius + 0.8f);
     const auto vn = ball.vel.getDotProduct (worst->n);
     if (vn < 0.0f)
-        ball.vel -= worst->n * (2.0f * vn);
+        ball.vel -= worst->n * ((wallGraceTimer > 0.0f ? 1.0f : 2.0f) * vn);
 }
 
 void World::collideBalls()
@@ -628,6 +864,12 @@ void World::collideBalls()
                     addWave (mid, b.prop, 0.35f);
 
                 addSparks (mid, a.prop, 5, 120.0f);
+
+                // ADSR balls hand a random gate length to the other ball.
+                if (a.prop.kind == PropKind::adsr)
+                    giveGate (b);
+                if (b.prop.kind == PropKind::adsr)
+                    giveGate (a);
 
                 if (a.prop.kind != PropKind::effect)
                     emitSound (a, a.prop, a.note, impact);
@@ -968,8 +1210,20 @@ void World::emitSound (const Ball& b, const Prop& oldProp, float oldNote, float 
     pitchInf = juce::jmax (pitchInf, b.waveAmp[0]);
     effectInf = juce::jmax (effectInf, b.waveAmp[2]);
 
-    const auto note = clampf (oldNote - pitchInf * 18.0f, 12.0f, 108.0f);
-    const auto send = clampf (0.08f + effectInf * 0.85f, 0.0f, 1.0f);
+    auto note = oldNote - pitchInf * 18.0f;
+
+    if (! scaleTable.empty())
+    {
+        note = quantizeNote (note);
+    }
+    else
+    {
+        const auto half = pitchHalfSpan (settings.pitchRange);
+        note = clampf (note, juce::jmax (0.0f, pitchCenter - half),
+                             juce::jmin (127.0f, pitchCenter + half));
+    }
+
+    const auto send = clampf (settings.baseReverb + effectInf * 0.85f, 0.0f, 1.0f);
     const auto velocity = clampf (impact / 420.0f, 0.12f, 1.0f);
 
     SoundEvent ev;
@@ -977,6 +1231,8 @@ void World::emitSound (const Ball& b, const Prop& oldProp, float oldNote, float 
     ev.pan = pan;
     ev.send = send;
     ev.velocity = velocity;
+    ev.gateSeconds = clampf (b.gate, 0.01f, 2.0f);
+    ev.waveform = juce::jlimit (0.0f, 1.0f, settings.baseWaveform);
     ev.attack = 0.005f;
     ev.decay = 0.12f;
     ev.sustain = 0.6f;
