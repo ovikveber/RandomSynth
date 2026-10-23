@@ -12,7 +12,9 @@
 
 小球在封闭场地内运动，与墙壁和其他小球碰撞。每次碰撞都会交换音高、包络和效果属性，生成波、场和火花，并产生音符/触发事件。最终得到的是持续变化、随机但不会跑调的旋律与节奏。
 
-本仓库的主要目标是 **VCV Rack 模块**。`Others/` 里是 JUCE 独立版、Python 视觉原型和本地构建脚本。
+VCV Rack 模块的源码与发布以专用仓库
+[RandomSynth-VCV](https://github.com/ovikveber/RandomSynth-VCV) 为准。
+本仓库的 `VCV-Module/` 是 2.0.0 历史副本，`Others/` 里是 JUCE 独立版、Python 视觉原型和本地构建脚本。
 
 ### 功能
 
@@ -35,22 +37,22 @@
 
 ### 直接安装（Windows x64，免编译）
 
-下载仓库中的：
+从 [RandomSynth-VCV Releases](https://github.com/ovikveber/RandomSynth-VCV/releases)
+下载最新的 `RandomSynth-2.0.1-win-x64.vcvplugin`，把这个 `.vcvplugin` 文件直接拖进
+VCV Rack 2.x 窗口即可加载。
 
-`VCV-Module/RandomSynth-2.0.0-win-x64.vcvplugin`
-
-把这个 `.vcvplugin` 文件直接拖进 VCV Rack 2.x 窗口即可加载。
+本仓库 `VCV-Module/` 内仍保留 `2.0.0` 历史预编译包，仅作存档；新版本请以专用仓库为准。
 
 注意：**源码文件夹不能直接拖进 Rack**，Rack 只识别编译好的 `.vcvplugin`，或包含 `plugin.dll` + `plugin.json` 的插件文件夹。
 
 ### 仓库结构
 
 ```
-VCV-Module/              VCV Rack 模块（开源主体，编译这个）
+VCV-Module/              VCV Rack 模块的 2.0.0 历史副本（已归档，不再开发）
   Makefile
   plugin.json
   src/
-  RandomSynth-2.0.0-win-x64.vcvplugin   预编译包
+  RandomSynth-2.0.0-win-x64.vcvplugin   历史预编译包
 Others/                  其他版本（原型、构建脚本、本地产物）
   CMakeLists.txt
   build.ps1
@@ -59,18 +61,16 @@ Others/                  其他版本（原型、构建脚本、本地产物）
   *.bat                  本地运行脚本
 ```
 
-只有 `VCV-Module/` 是构建 VCV 插件所必需的。`Others/` 放的是其他版本和本地产物。
+**VCV 插件请到 [RandomSynth-VCV](https://github.com/ovikveber/RandomSynth-VCV)
+构建和发布。** `VCV-Module/` 只是历史副本，`Others/` 放的是其他版本和本地产物。
 
 ### 从源码编译 VCV 模块
 
-需要：
-
-- [VCV Rack SDK](https://vcvrack.com/manual/Building) 2.x
-- `make`
-- 支持 C++17 的编译器（Windows 下推荐 MSYS2 MinGW-w64）
+请在 [RandomSynth-VCV](https://github.com/ovikveber/RandomSynth-VCV) 仓库中编译：
 
 ```sh
-cd VCV-Module
+git clone https://github.com/ovikveber/RandomSynth-VCV
+cd RandomSynth-VCV
 
 # 编译 plugin.dll
 make RACK_DIR=/path/to/Rack-SDK
@@ -128,9 +128,10 @@ walls. Every collision transfers pitch, envelope and effect properties, spawns
 waves/fields/sparks, and produces musical events. The result is an endless,
 unpredictable but tonal stream of notes and triggers.
 
-The primary target of this repository is the **VCV Rack module**. `Others/`
-contains the JUCE standalone prototype, the Python visual prototype and local
-build scripts.
+The **VCV Rack module** is developed and released in the dedicated
+[RandomSynth-VCV](https://github.com/ovikveber/RandomSynth-VCV) repository.
+`VCV-Module/` here is a historical 2.0.0 copy; `Others/` contains the JUCE
+standalone prototype, the Python visual prototype and local build scripts.
 
 ### Features
 
@@ -155,24 +156,25 @@ build scripts.
 
 ### Install without building (Windows x64)
 
-Download:
+Download the latest `RandomSynth-2.0.1-win-x64.vcvplugin` from
+[RandomSynth-VCV Releases](https://github.com/ovikveber/RandomSynth-VCV/releases)
+and drag the `.vcvplugin` file into the VCV Rack 2.x window.
 
-`VCV-Module/RandomSynth-2.0.0-win-x64.vcvplugin`
-
-Drag the `.vcvplugin` file into the VCV Rack 2.x window.
+`VCV-Module/` in this repository still contains the historical `2.0.0` prebuilt
+package for archival purposes only; use the dedicated repository for new versions.
 
 Note: the source folder itself cannot be dragged into Rack — only the built
-`.vcvplugin` file (or a plugin folder containing `plugin.dll` and
-`plugin.json`) can be loaded.
+`.vcvplugin` file (or a plugin folder containing `plugin.dll` and `plugin.json`)
+can be loaded.
 
 ### Repository layout
 
 ```
-VCV-Module/              VCV Rack module (the open-source target; build this)
+VCV-Module/              Historical 2.0.0 copy of the VCV module (archived)
   Makefile
   plugin.json
   src/
-  RandomSynth-2.0.0-win-x64.vcvplugin   Prebuilt package
+  RandomSynth-2.0.0-win-x64.vcvplugin   Historical prebuilt package
 Others/                  Everything else (prototypes, build scripts, local outputs)
   CMakeLists.txt
   build.ps1
@@ -181,19 +183,19 @@ Others/                  Everything else (prototypes, build scripts, local outpu
   *.bat                  Local run scripts
 ```
 
-Only `VCV-Module/` is needed to build the VCV Rack plugin. `Others/` contains
-the in-progress standalone/prototype versions and local build outputs.
+**Build and release the VCV plugin from
+[RandomSynth-VCV](https://github.com/ovikveber/RandomSynth-VCV).**
+`VCV-Module/` here is only a historical copy; `Others/` contains the
+standalone/prototype versions and local build outputs.
 
 ### Build the VCV Rack module from source
 
-Requirements:
-
-- [VCV Rack SDK](https://vcvrack.com/manual/Building) 2.x
-- `make`
-- A C++17 compiler (MSYS2 MinGW-w64 on Windows)
+Build it in the [RandomSynth-VCV](https://github.com/ovikveber/RandomSynth-VCV)
+repository:
 
 ```sh
-cd VCV-Module
+git clone https://github.com/ovikveber/RandomSynth-VCV
+cd RandomSynth-VCV
 
 # Build plugin.dll
 make RACK_DIR=/path/to/Rack-SDK
